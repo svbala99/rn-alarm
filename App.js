@@ -1,36 +1,49 @@
-import React, {useState, useEffect} from 'react';
-import {View, Text, Button, TouchableOpacity} from 'react-native';
+/* eslint-disable react-hooks/exhaustive-deps */
+import React, {useState, useEffect, useRef} from 'react';
+import {AppState, View, Text, Button, TouchableOpacity} from 'react-native';
 import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import mySound from './assets/sound.mp3';
-var Sound = require('react-native-sound');
-Sound.setCategory('Playback');
-
-var ding = new Sound(mySound, error => {
-  if (error) {
-    console.log('failed to load the sound', error);
-    return;
-  }
-  // if loaded successfully
-  console.log(
-    'duration in seconds: ' +
-      ding.getDuration() +
-      'number of channels: ' +
-      ding.getNumberOfChannels(),
-  );
-});
+import mySoundLocation from './assets/sound.mp3';
 
 function HomeScreen({navigation}) {
+  const appState = useRef(AppState.currentState);
+  const [, setAppStateVisible] = useState(appState.current);
+
+  let Sound = require('react-native-sound');
+  Sound.setCategory('Playback');
+
+  let soundObj = new Sound(mySoundLocation, error => {
+    if (error) {
+      console.log('failed to load the sound', error);
+      return;
+    }
+  });
+
   useEffect(() => {
-    ding.setVolume(1);
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      // console.log('NEXT STATE', nextAppState);
+      if (
+        appState.current.match(/inactive|background/) &&
+        nextAppState === 'active'
+      ) {
+        // console.log('App has come to the foreground!');
+      }
+
+      appState.current = nextAppState;
+      setAppStateVisible(appState.current);
+      // console.log('AppState', appState.current);
+    });
+
+    soundObj.setVolume(1);
     return () => {
-      ding.release();
+      soundObj.release();
+      subscription.remove();
     };
   }, []);
 
   const playPause = () => {
-    ding.play(success => {
+    soundObj.setNumberOfLoops(-1).play(success => {
       if (success) {
         console.log('successfully finished playing');
       } else {
